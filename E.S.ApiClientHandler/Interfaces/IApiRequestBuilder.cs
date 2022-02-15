@@ -1,24 +1,37 @@
-﻿using E.S.ApiClientHandler.Models;
-using E.S.ApiClientHandler.Utils;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
+using E.S.ApiClientHandler.Models;
+using E.S.ApiClientHandler.Utils;
 
 namespace E.S.ApiClientHandler.Interfaces
 {
     public interface IApiRequestBuilder : IDisposable
     {
-        IApiRequestBuilder WithHttpRequestMessage(HttpRequestMessageWrapper httpRequestMessageWrapper);
-        IApiRequestBuilder WithUrl(ApiUrlBuilder requestUrlBuilder);
-        IApiRequestBuilder WithUrl(string url);
-        IApiRequestBuilder AddHeader(string key, string header);
-        IApiRequestBuilder AddKeyAndHeaders(Dictionary<string, string> keyAndHeaders);
-        IApiRequestBuilder WithContent(object content);
-        IApiRequestBuilder WithMethod(HttpMethod httpMethod);
-        IApiRequestBuilder WithCacheClient(IApiCachingManager apiCachingManager, int absoluteExpirationRelativeToNowInSeconds = 300);
+        IApiRequestBuilderInner1 New();
+    }
+
+    public interface IApiRequestBuilderInner1 : IDisposable
+    {
+        IApiRequestBuilderInner1 WithHttpRequestMessage(HttpRequestMessageWrapper httpRequestMessageWrapper);
+        IApiRequestBuilderInner1 AddHeader(string key, string header);
+        IApiRequestBuilderInner1 AddKeyAndHeaders(Dictionary<string, string> keyAndHeaders);
+        IApiRequestBuilderInner1 WithContent(object content);
+
+        IApiRequestBuilderInner1 WithCacheClient(IApiCachingManager apiCachingManager,
+            int absoluteExpirationRelativeToNowInSeconds = 600);
+
+        IApiRequestBuilderInner1 WithMethod(HttpMethod httpMethod);
+        IApiRequestBuilderInner2 WithUrl(ApiUrlBuilder requestUrlBuilder);
+        IApiRequestBuilderInner2 WithUrl(string url);
+    }
+
+    public interface IApiRequestBuilderInner2 : IDisposable
+    {
         Task<ApiResponse<T>> ExecuteAsync<T>(T defaultValue = null) where T : class, new();
         Task<ApiResponse> ExecuteNoValueAsync();
-        IApiRequestBuilder New();
+        
+        Task<ApiResponse<string>> ExecuteAsync();
     }
 }

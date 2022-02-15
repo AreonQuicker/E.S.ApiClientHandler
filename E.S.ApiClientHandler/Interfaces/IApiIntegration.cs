@@ -1,0 +1,23 @@
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
+
+namespace E.S.ApiClientHandler.Interfaces
+{
+    public interface IApiIntegration
+    {
+        Task<T> GetAsync<T>(string path, bool withCache = false) where T : class, new();
+        T Get<T>(string path, bool withCache = false) where T : class, new();
+        Task<T> GetAsIsAsync<T>(string path, bool withCache = false) where T : class, new();
+        T GetAsIs<T>(string path, bool withCache = false) where T : class, new();
+        Task<List<T>> GetListAsync<T>(string path, bool withCache = false) where T : class;
+        List<T> GetList<T>(string path, bool withCache = false) where T : class;
+        Task<List<T>> GetAsIsListAsync<T>(string path, bool withCache = false) where T : class;
+        List<T> GetAsIsList<T>(string path, bool withCache = false) where T : class;
+        Task<T> PostAsync<T>(string path, object content) where T : class, new();
+        T Post<T>(string path, object content) where T : class, new();
+        Task<T> PostAsIsAsync<T>(string path, object content) where T : class, new();
+        T PostAsIs<T>(string path, object content) where T : class, new();
+        Task<List<T>> PostListAsync<T>(string path, object content) where T : class;
+        List<T> PostList<T>(string path, object content) where T : class;
+    }
+}

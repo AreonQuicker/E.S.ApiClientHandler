@@ -1,40 +1,45 @@
-﻿using E.S.ApiClientHandler.Extensions;
-using System.Net;
+﻿using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using E.S.ApiClientHandler.Extensions;
 
 namespace E.S.ApiClientHandler.Utils
 {
     public class HttpResponseMessageWrapper
     {
         #region Fields
-        private readonly HttpResponseMessage _httpResponseMessage;
+
         #endregion
 
         #region Constructor
+
         public HttpResponseMessageWrapper(HttpResponseMessage httpResponseMessage)
         {
-            _httpResponseMessage = httpResponseMessage;
+            HttpResponseMessage = httpResponseMessage;
         }
+
         #endregion
 
         #region Properties
-        public HttpResponseMessage HttpResponseMessage => _httpResponseMessage;
 
-        public bool IsSuccess => _httpResponseMessage.IsSuccessStatusCode;
+        public HttpResponseMessage HttpResponseMessage { get; }
 
-        public HttpStatusCode StatusCode => _httpResponseMessage.StatusCode;
+        public bool IsSuccess => HttpResponseMessage.IsSuccessStatusCode;
+
+        public HttpStatusCode StatusCode => HttpResponseMessage.StatusCode;
+
         #endregion
 
         #region Methods
-        public Task<T> ResponseAsAsync<T>(T defaultValue = null, bool shouldBeSuccess = true) where T : class, new ()
+
+        public Task<T> ResponseAsAsync<T>(T defaultValue = null, bool shouldBeSuccess = true) where T : class, new()
         {
-            return _httpResponseMessage.ToAsync<T>(defaultValue, shouldBeSuccess);
+            return HttpResponseMessage.ToAsync(defaultValue, shouldBeSuccess);
         }
 
         public Task<byte[]> ResponseAsBytesAsync()
         {
-            return _httpResponseMessage.ToBytesAsync();
+            return HttpResponseMessage.ToBytesAsync();
         }
 
         #endregion

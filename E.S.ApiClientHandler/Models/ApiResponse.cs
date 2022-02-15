@@ -1,11 +1,12 @@
-﻿using E.S.ApiClientHandler.Utils;
-using System.Net;
+﻿using System.Net;
+using E.S.ApiClientHandler.Utils;
 
 namespace E.S.ApiClientHandler.Models
 {
     public class ApiResponse
     {
         private readonly bool? _success;
+
         public ApiResponse(bool? success, string errorMessage, HttpResponseMessageWrapper httpResponseMessage)
         {
             _success = success;
@@ -16,25 +17,21 @@ namespace E.S.ApiClientHandler.Models
         public ApiResponse(HttpResponseMessageWrapper httpResponseMessage)
             : this(null, null, httpResponseMessage)
         {
-
         }
 
         public ApiResponse(string errorMessage, HttpResponseMessageWrapper httpResponseMessage)
             : this(null, errorMessage, httpResponseMessage)
         {
-
         }
 
         public ApiResponse(bool success)
-             : this(success, null, null)
+            : this(success, null, null)
         {
-
         }
 
         public ApiResponse(bool success, string errorMessage)
-           : this(success, errorMessage, null)
+            : this(success, errorMessage, null)
         {
-
         }
 
         public HttpResponseMessageWrapper HttpResponseMessage { get; set; }
@@ -61,7 +58,7 @@ namespace E.S.ApiClientHandler.Models
         }
 
         public ApiResponse(T value, bool success, string errorMessage)
-           : base(success, errorMessage)
+            : base(success, errorMessage)
         {
             Value = value;
         }

@@ -2,17 +2,17 @@
 {
     public class ApiRequestBuilderConfig
     {
+        public ApiRequestBuilderConfig(bool throwApiException, ApiRequestBuilderLoggerConfig logger)
+        {
+            ThrowApiException = throwApiException;
+            Logger = logger;
+        }
+
         public bool ThrowApiException { get; } = true;
 
         public bool EmptyListIfNull { get; set; } = true;
 
-        public ApiRequestBuilderLoggerConfig Logger { get; } = null;
-
-        public ApiRequestBuilderConfig(bool throwApiException, ApiRequestBuilderLoggerConfig logger)
-        {
-            ThrowApiException = throwApiException;
-            Logger = logger;   
-        }
+        public ApiRequestBuilderLoggerConfig Logger { get; }
 
         public bool UseLogger => Logger != null && Logger.Logger != null;
 

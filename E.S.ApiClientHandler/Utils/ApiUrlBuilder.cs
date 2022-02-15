@@ -22,13 +22,9 @@
                 && !string.IsNullOrEmpty(value))
             {
                 if (_url.Contains("?"))
-                {
                     _url += $"&{key}={value}";
-                }
                 else
-                {
                     _url += $"?{key}={value}";
-                }
             }
 
             return this;
