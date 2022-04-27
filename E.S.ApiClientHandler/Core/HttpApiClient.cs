@@ -6,6 +6,12 @@ namespace E.S.ApiClientHandler.Core
 {
     public class HttpApiClient : IHttpApiClient
     {
+        #region Private Readonly Fields
+
+        private readonly bool _httpClientCreatedInService;
+
+        #endregion
+
         #region Methods
 
         public void SetBaseUrl(string baseUrl)
@@ -44,12 +50,6 @@ namespace E.S.ApiClientHandler.Core
 
             return httpClient;
         }
-
-        #endregion
-
-        #region Private Readonly Fields
-
-        private readonly bool _httpClientCreatedInService;
 
         #endregion
 

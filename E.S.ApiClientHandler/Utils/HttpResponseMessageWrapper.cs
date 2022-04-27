@@ -7,16 +7,16 @@ namespace E.S.ApiClientHandler.Utils
 {
     public class HttpResponseMessageWrapper
     {
-        #region Fields
-
-        #endregion
-
         #region Constructor
 
         public HttpResponseMessageWrapper(HttpResponseMessage httpResponseMessage)
         {
             HttpResponseMessage = httpResponseMessage;
         }
+
+        #endregion
+
+        #region Fields
 
         #endregion
 

@@ -8,13 +8,13 @@
         <Version>1.0.5</Version>
         <LangVersion>8</LangVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <PackageVersion>1.0.9</PackageVersion>
+        <PackageVersion>1.0.11</PackageVersion>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="E.S.Logging" Version="1.0.5"/>
+        <PackageReference Include="E.S.Logging" Version="1.0.7"/>
         <PackageReference Include="E.S.Simple.MemoryCache" Version="1.1.0"/>
-        <PackageReference Include="Newtonsoft.Json" Version="12.0.3"/>
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.1"/>
     </ItemGroup>
 
 </Project>

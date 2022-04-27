@@ -8,6 +8,12 @@ namespace E.S.ApiClientHandler.Utils
 {
     public class HttpRequestMessageWrapper
     {
+        #region Private Readonly Fields
+
+        private string _baseUrl;
+
+        #endregion
+
         #region Constructor
 
         public HttpRequestMessageWrapper(string baseUrl = null)
@@ -22,12 +28,6 @@ namespace E.S.ApiClientHandler.Utils
         #region Properties
 
         public HttpRequestMessage HttpRequestMessage { get; }
-
-        #endregion
-
-        #region Private Readonly Fields
-
-        private string _baseUrl;
 
         #endregion
 

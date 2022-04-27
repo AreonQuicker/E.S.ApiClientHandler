@@ -30,10 +30,7 @@ namespace E.S.ApiClientHandler.Extensions
         {
             try
             {
-                if (!response.IsSuccessStatusCode && shouldBeSuccess)
-                {
-                    return defaultValue;
-                }
+                if (!response.IsSuccessStatusCode && shouldBeSuccess) return defaultValue;
 
                 var content = await response.Content.ReadAsStringAsync();
 

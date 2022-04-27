@@ -1,10 +1,14 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace E.S.ApiClientHandler.Interfaces
 {
-    public interface IApiIntegration
+    public interface IApiIntegration : IDisposable
     {
+        HttpClient Client { get; }
+        IApiRequestBuilder ApiRequestBuilder { get; }
         Task<T> GetAsync<T>(string path, bool withCache = false) where T : class, new();
         T Get<T>(string path, bool withCache = false) where T : class, new();
         Task<T> GetAsIsAsync<T>(string path, bool withCache = false) where T : class, new();
@@ -19,5 +23,6 @@ namespace E.S.ApiClientHandler.Interfaces
         T PostAsIs<T>(string path, object content) where T : class, new();
         Task<List<T>> PostListAsync<T>(string path, object content) where T : class;
         List<T> PostList<T>(string path, object content) where T : class;
+        void SetUser(string user);
     }
 }

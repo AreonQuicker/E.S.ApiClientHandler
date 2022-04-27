@@ -32,21 +32,13 @@ namespace E.S.ApiClientHandler.Core
         private readonly string _baseUrl;
         private readonly ApiRequestBuilderConfig _apiRequestBuilderConfig;
         private bool _hasBeenDisposed;
+        private HttpRequestMessageWrapper _httpRequestMessageWrapper;
 
         #endregion
 
         #region Constructor
 
-        #region Fields
-
-        private int? _absoluteExpirationRelativeToNowInSeconds;
-        private bool _withCache;
-        private HttpRequestMessageWrapper _httpRequestMessageWrapper;
-        private IApiCachingManager _apiCachingManager;
-
-        #endregion
-
-        public ApiRequestBuilder(string baseUrl, ApiRequestBuilderConfig apiRequestBuilderConfig = null)
+        private ApiRequestBuilder(string baseUrl, ApiRequestBuilderConfig apiRequestBuilderConfig = null)
         {
             _baseUrl = baseUrl;
             _apiRequestBuilderConfig = apiRequestBuilderConfig;
@@ -76,6 +68,15 @@ namespace E.S.ApiClientHandler.Core
         }
 
         public ApiRequestBuilder(
+            HttpClient httpClient,
+            ApiRequestBuilderConfig apiRequestBuilderConfig = null)
+            : this(httpClient.BaseAddress?.ToString(), apiRequestBuilderConfig)
+        {
+            _httpApiClient = new HttpApiClient(httpClient);
+            _httpRequestMessageWrapper = new HttpRequestMessageWrapper(httpClient.BaseAddress?.ToString());
+        }
+
+        public ApiRequestBuilder(
             IHttpApiClient httpApiClient,
             string baseUrl,
             ApiRequestBuilderConfig apiRequestBuilderConfig = null)
@@ -85,6 +86,16 @@ namespace E.S.ApiClientHandler.Core
             _httpRequestMessageWrapper = new HttpRequestMessageWrapper(baseUrl);
         }
 
+        public ApiRequestBuilder(
+            IHttpApiClient httpApiClient,
+            ApiRequestBuilderConfig apiRequestBuilderConfig = null)
+            : this(httpApiClient.HttpClient.BaseAddress?.ToString(), apiRequestBuilderConfig)
+        {
+            _httpApiClient = httpApiClient;
+            _httpRequestMessageWrapper =
+                new HttpRequestMessageWrapper(httpApiClient.HttpClient.BaseAddress?.ToString());
+        }
+
         #endregion
 
         #region IAPIClient
@@ -92,6 +103,21 @@ namespace E.S.ApiClientHandler.Core
         public IApiRequestBuilderInner1 New()
         {
             return new ApiRequestBuilder(_httpApiClient, _baseUrl, _apiRequestBuilderConfig);
+        }
+
+        public IApiRequestBuilder SetUser(string user)
+        {
+            _apiRequestBuilderConfig?.Logger?.SetUser(user);
+
+            return this;
+        }
+
+        public IApiRequestBuilder WithCacheClient(IApiCachingManager apiCachingManager,
+            int absoluteExpirationRelativeToNowInSeconds)
+        {
+            _apiRequestBuilderConfig.SetCache(apiCachingManager, absoluteExpirationRelativeToNowInSeconds);
+
+            return this;
         }
 
         public IApiRequestBuilderInner1 WithHttpRequestMessage(HttpRequestMessageWrapper httpRequestMessageWrapper)
@@ -118,16 +144,6 @@ namespace E.S.ApiClientHandler.Core
         public IApiRequestBuilderInner1 WithContent(object content)
         {
             _httpRequestMessageWrapper.WithContent(content);
-
-            return this;
-        }
-
-        public IApiRequestBuilderInner1 WithCacheClient(IApiCachingManager apiCachingManager,
-            int absoluteExpirationRelativeToNowInSeconds = 600)
-        {
-            _apiCachingManager = apiCachingManager;
-            _absoluteExpirationRelativeToNowInSeconds = absoluteExpirationRelativeToNowInSeconds;
-            _withCache = true;
 
             return this;
         }
@@ -165,7 +181,7 @@ namespace E.S.ApiClientHandler.Core
 
                 if (cache.useCache)
                 {
-                    var cacheResult = await _apiCachingManager.GetAsync<T>(cache.cacheKey);
+                    var cacheResult = await _apiRequestBuilderConfig.ApiCachingManager.GetAsync<T>(cache.cacheKey);
 
                     if (cacheResult != null) return new ApiResponse<T>(cacheResult, true, null);
                 }
@@ -174,7 +190,7 @@ namespace E.S.ApiClientHandler.Core
 
                 var errorHandler = await HandleResponseMessageWrapperErrorAsync<T>(response);
                 if (!errorHandler.Handled)
-                   await HandleResponseMessageErrorAsync(response.HttpResponseMessage);
+                    await HandleResponseMessageErrorAsync(response.HttpResponseMessage);
 
                 var errorHandler3 = HandleRequestError(response);
 
@@ -193,8 +209,8 @@ namespace E.S.ApiClientHandler.Core
 
                     if (cache.useCache
                         && value != null)
-                        await _apiCachingManager.SetAsync(cache.cacheKey, value,
-                            _absoluteExpirationRelativeToNowInSeconds);
+                        await _apiRequestBuilderConfig.ApiCachingManager.SetAsync(cache.cacheKey, value,
+                            _apiRequestBuilderConfig.AbsoluteExpirationRelativeToNowInSeconds);
 
                     return new ApiResponse<T>(value, response);
                 }
@@ -220,7 +236,7 @@ namespace E.S.ApiClientHandler.Core
                 DisposeHttpClient();
             }
         }
-        
+
         public async Task<ApiResponse<string>> ExecuteAsync()
         {
             if (_hasBeenDisposed) throw new ApiException("Service has already been disposed");
@@ -235,21 +251,15 @@ namespace E.S.ApiClientHandler.Core
                 var errorHandler3 = HandleRequestError(response);
 
                 if (_apiRequestBuilderConfig.ThrowApiException)
-                {
                     if (errorHandler3.Handled)
                         throw errorHandler3.Error;
-                }
-                
+
                 var value = await response.HttpResponseMessage.ToStringAsync(false);
 
                 if (response.IsSuccess)
-                {
                     return new ApiResponse<string>(value, response);
-                }
                 else
-                {
                     return new ApiResponse<string>(value, response);
-                }
             }
             catch (ApiException)
             {
@@ -315,7 +325,7 @@ namespace E.S.ApiClientHandler.Core
         {
             return new ApiRequestBuilder(baseUrl, authorizationHeader, acceptHeader, apiRequestBuilderConfig);
         }
-        
+
         public static IApiRequestBuilder Make(string baseUrl,
             ApiRequestBuilderConfig apiRequestBuilderConfig = null)
         {
@@ -334,7 +344,7 @@ namespace E.S.ApiClientHandler.Core
             HttpClient httpClient,
             ApiRequestBuilderConfig apiRequestBuilderConfig = null)
         {
-            return new ApiRequestBuilder(httpClient, null, apiRequestBuilderConfig);
+            return new ApiRequestBuilder(httpClient, apiRequestBuilderConfig);
         }
 
         #endregion
@@ -346,15 +356,15 @@ namespace E.S.ApiClientHandler.Core
             if (_apiRequestBuilderConfig.UseLogger)
                 _apiRequestBuilderConfig.Logger.Logger.LogErrorOperationWithExtraFormat(
                     LoggerStatusEnum.Error,
-                    "Api Error",
+                    "Api Client",
                     "Api Call",
-                    apx?.StatusCode.ToString() ?? "",
-                    _apiRequestBuilderConfig.Logger?.User ?? "",
-                    apx?.Message ?? "",
+                    apx?.StatusCode.ToString(),
+                    _apiRequestBuilderConfig.Logger?.User,
+                    apx?.Message,
                     apx,
                     _apiRequestBuilderConfig.Logger.Format,
-                    apx?.StatusCode.ToString() ?? "",
-                    apx?.Url ?? ""
+                    apx?.StatusCode.ToString(),
+                    apx?.Url
                 );
         }
 
@@ -363,21 +373,20 @@ namespace E.S.ApiClientHandler.Core
             if (_apiRequestBuilderConfig.UseLogger)
                 _apiRequestBuilderConfig.Logger.Logger.LogErrorOperationWithExtraFormat(
                     LoggerStatusEnum.Error,
-                    "Api Error",
+                    "Api Client",
                     "Api Call",
                     "",
-                    _apiRequestBuilderConfig.Logger?.User ?? "",
-                    apx?.Message ?? "",
+                    _apiRequestBuilderConfig.Logger?.User,
+                    apx?.Message,
                     apx,
                     _apiRequestBuilderConfig.Logger.Format,
                     "",
-                    _httpRequestMessageWrapper?.HttpRequestMessage?.RequestUri.ToString() ?? ""
+                    _httpRequestMessageWrapper?.HttpRequestMessage?.RequestUri.ToString()
                 );
         }
 
         private async Task<(bool Handled, ApiException Error)> HandleResponseMessageErrorAsync(
             HttpResponseMessage response)
-        
         {
             if (!response.IsSuccessStatusCode)
             {
@@ -452,8 +461,7 @@ namespace E.S.ApiClientHandler.Core
 
         private (bool useCache, string cacheKey) GetCache()
         {
-            var useCache = _apiCachingManager != null
-                           && _withCache
+            var useCache = _apiRequestBuilderConfig.UseCache
                            && _httpRequestMessageWrapper.HttpRequestMessage.Method == HttpMethod.Get;
 
             if (!useCache) return (false, null);

@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "ProjectMap": {
+    "d26a16d9-414d-4baf-b9df-355a2126e15c": {
+      "ProjectGuid": "d26a16d9-414d-4baf-b9df-355a2126e15c",
+      "DisplayName": "E.S.ApiClientHandler",
+      "ColorIndex": 0
+    }
+  },
+  "NextColorIndex": 1
+}

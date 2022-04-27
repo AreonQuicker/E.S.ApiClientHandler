@@ -14,10 +14,15 @@ namespace E.S.ApiClientHandler.Config
 
         public ILogger Logger { get; }
 
-        public string User { get; }
+        public string User { get; private set; }
 
         public string Format { get; } =
             "StatusCode:{statusCode} Url:{url}";
+
+        public void SetUser(string user)
+        {
+            User = user;
+        }
 
         public static ApiRequestBuilderLoggerConfig Create(ILogger logger, string user, string format)
         {

@@ -10,48 +10,91 @@ using Microsoft.Extensions.Logging;
 
 namespace E.S.ApiClientHandler.Core
 {
-    public abstract class ApiIntegrationBase : IDisposable
+    public abstract class ApiIntegrationBase : IApiIntegration
     {
-        protected readonly int AbsoluteExpirationRelativeToNowInSeconds;
-        protected readonly IApiRequestBuilder ApiRequestBuilder;
-        protected readonly IApiCachingManager CachingManager;
-        protected readonly HttpClient Client;
+        protected ApiIntegrationBase(HttpClient client)
+        {
+            Client = client;
 
-        protected ApiIntegrationBase(string apiBaseUrl, string authorizationHeader = null, string userName = null,
-            ILogger logger = null, IApiCachingManager cachingManager = null,
-            int absoluteExpirationRelativeToNowInSeconds = 600)
+            ApiRequestBuilder = Core.ApiRequestBuilder.Make(Client,
+                ApiRequestBuilderConfig.Create(true, ApiRequestBuilderLoggerConfig.Create(null, null)));
+        }
+
+        protected ApiIntegrationBase(HttpClient client, IApiCachingManager cachingManager,
+            int absoluteExpirationRelativeToNowInSeconds)
+        {
+            Client = client;
+
+            ApiRequestBuilder = Core.ApiRequestBuilder.Make(Client,
+                ApiRequestBuilderConfig.Create(true, ApiRequestBuilderLoggerConfig.Create(null, null), cachingManager,
+                    absoluteExpirationRelativeToNowInSeconds));
+        }
+
+        protected ApiIntegrationBase(HttpClient client, string user, ILogger logger,
+            IApiCachingManager cachingManager,
+            int absoluteExpirationRelativeToNowInSeconds)
+        {
+            Client = client;
+
+            ApiRequestBuilder = Core.ApiRequestBuilder.Make(Client,
+                ApiRequestBuilderConfig.Create(true, ApiRequestBuilderLoggerConfig.Create(logger, user), cachingManager,
+                    absoluteExpirationRelativeToNowInSeconds));
+        }
+
+        protected ApiIntegrationBase(string apiBaseUrl, string authorizationHeader)
         {
             if (apiBaseUrl == null) throw new ArgumentNullException(nameof(apiBaseUrl));
-            CachingManager = cachingManager;
-            AbsoluteExpirationRelativeToNowInSeconds = absoluteExpirationRelativeToNowInSeconds;
+
             Client = new HttpClient {BaseAddress = new Uri(apiBaseUrl)};
+
             if (!string.IsNullOrEmpty(authorizationHeader))
                 Client.DefaultRequestHeaders.Add("Authorization", authorizationHeader);
+
             ApiRequestBuilder = Core.ApiRequestBuilder.Make(Client, apiBaseUrl,
-                ApiRequestBuilderConfig.Create(true, ApiRequestBuilderLoggerConfig.Create(logger, userName)));
+                ApiRequestBuilderConfig.Create(true, ApiRequestBuilderLoggerConfig.Create(null, null)));
         }
 
-        protected ApiIntegrationBase(string apiBaseUrl) : this(apiBaseUrl, null, null, null, null)
+        protected ApiIntegrationBase(string apiBaseUrl, string authorizationHeader,
+            IApiCachingManager cachingManager,
+            int absoluteExpirationRelativeToNowInSeconds)
         {
+            if (apiBaseUrl == null) throw new ArgumentNullException(nameof(apiBaseUrl));
+
+            Client = new HttpClient {BaseAddress = new Uri(apiBaseUrl)};
+
+            if (!string.IsNullOrEmpty(authorizationHeader))
+                Client.DefaultRequestHeaders.Add("Authorization", authorizationHeader);
+
+            ApiRequestBuilder = Core.ApiRequestBuilder.Make(Client, apiBaseUrl,
+                ApiRequestBuilderConfig.Create(true, ApiRequestBuilderLoggerConfig.Create(null, null), cachingManager,
+                    absoluteExpirationRelativeToNowInSeconds));
         }
 
-        protected ApiIntegrationBase(string apiBaseUrl, string authorizationHeader = null, string userName = null) :
-            this(
-                apiBaseUrl, authorizationHeader, userName, null, null)
+        protected ApiIntegrationBase(string apiBaseUrl, string authorizationHeader,
+            string user, ILogger logger,
+            IApiCachingManager cachingManager,
+            int absoluteExpirationRelativeToNowInSeconds)
         {
+            if (apiBaseUrl == null) throw new ArgumentNullException(nameof(apiBaseUrl));
+
+            Client = new HttpClient {BaseAddress = new Uri(apiBaseUrl)};
+
+            if (!string.IsNullOrEmpty(authorizationHeader))
+                Client.DefaultRequestHeaders.Add("Authorization", authorizationHeader);
+
+            ApiRequestBuilder = Core.ApiRequestBuilder.Make(Client, apiBaseUrl,
+                ApiRequestBuilderConfig.Create(true, ApiRequestBuilderLoggerConfig.Create(logger, user), cachingManager,
+                    absoluteExpirationRelativeToNowInSeconds));
         }
 
-        protected ApiIntegrationBase(string apiBaseUrl, string authorizationHeader = null, string userName = null,
-            ILogger logger = null) : this(apiBaseUrl, authorizationHeader, userName, logger, null)
-        {
-        }
+        public IApiRequestBuilder ApiRequestBuilder { get; }
+        public HttpClient Client { get; }
 
         #region IDisposable
 
         public void Dispose()
         {
             ApiRequestBuilder.Dispose();
-            Client.Dispose();
         }
 
         #endregion
@@ -63,7 +106,6 @@ namespace E.S.ApiClientHandler.Core
             var newUrl = path.Replace(Client?.BaseAddress?.ToString() ?? "", "");
             var result = await ApiRequestBuilder.New()
                 .WithMethod(HttpMethod.Get)
-                .WithCacheClient(withCache ? CachingManager : null, AbsoluteExpirationRelativeToNowInSeconds)
                 .WithUrl(newUrl)
                 .ExecuteAsync<ContentResponse<T>>();
             return GetData(result);
@@ -71,15 +113,7 @@ namespace E.S.ApiClientHandler.Core
 
         public T Get<T>(string path, bool withCache = false) where T : class, new()
         {
-            var newUrl = path.Replace(Client?.BaseAddress?.ToString() ?? "", "");
-            var result = ApiRequestBuilder.New()
-                .WithMethod(HttpMethod.Get)
-                .WithCacheClient(withCache ? CachingManager : null, AbsoluteExpirationRelativeToNowInSeconds)
-                .WithUrl(newUrl)
-                .ExecuteAsync<ContentResponse<T>>()
-                .GetAwaiter()
-                .GetResult();
-            return GetData(result);
+            return GetAsync<T>(path, withCache).GetAwaiter().GetResult();
         }
 
         public async Task<T> GetAsIsAsync<T>(string path, bool withCache = false) where T : class, new()
@@ -87,7 +121,6 @@ namespace E.S.ApiClientHandler.Core
             var newUrl = path.Replace(Client?.BaseAddress?.ToString() ?? "", "");
             var result = await ApiRequestBuilder.New()
                 .WithMethod(HttpMethod.Get)
-                .WithCacheClient(withCache ? CachingManager : null, AbsoluteExpirationRelativeToNowInSeconds)
                 .WithUrl(newUrl)
                 .ExecuteAsync<T>();
             return GetData(result);
@@ -95,15 +128,7 @@ namespace E.S.ApiClientHandler.Core
 
         public T GetAsIs<T>(string path, bool withCache = false) where T : class, new()
         {
-            var newUrl = path.Replace(Client?.BaseAddress?.ToString() ?? "", "");
-            var result = ApiRequestBuilder.New()
-                .WithMethod(HttpMethod.Get)
-                .WithCacheClient(withCache ? CachingManager : null, AbsoluteExpirationRelativeToNowInSeconds)
-                .WithUrl(newUrl)
-                .ExecuteAsync<T>()
-                .GetAwaiter()
-                .GetResult();
-            return GetData(result);
+            return GetAsIsAsync<T>(path, withCache).GetAwaiter().GetResult();
         }
 
         public async Task<List<T>> GetListAsync<T>(string path, bool withCache = false) where T : class
@@ -111,23 +136,15 @@ namespace E.S.ApiClientHandler.Core
             var newUrl = path.Replace(Client?.BaseAddress?.ToString() ?? "", "");
             var result = await ApiRequestBuilder.New()
                 .WithMethod(HttpMethod.Get)
-                .WithCacheClient(withCache ? CachingManager : null, AbsoluteExpirationRelativeToNowInSeconds)
                 .WithUrl(newUrl)
                 .ExecuteAsync<ContentResponse<List<T>>>();
+
             return (result?.Value?.Data ?? new List<T>()).Where(w => w != null).ToList();
         }
 
         public List<T> GetList<T>(string path, bool withCache = false) where T : class
         {
-            var newUrl = path.Replace(Client?.BaseAddress?.ToString() ?? "", "");
-            var result = ApiRequestBuilder.New()
-                .WithMethod(HttpMethod.Get)
-                .WithCacheClient(withCache ? CachingManager : null, AbsoluteExpirationRelativeToNowInSeconds)
-                .WithUrl(newUrl)
-                .ExecuteAsync<ContentResponse<List<T>>>()
-                .GetAwaiter()
-                .GetResult();
-            return (result?.Value?.Data ?? new List<T>()).Where(w => w != null).ToList();
+            return GetListAsync<T>(path, withCache).GetAwaiter().GetResult();
         }
 
         public async Task<List<T>> GetAsIsListAsync<T>(string path, bool withCache = false) where T : class
@@ -135,7 +152,6 @@ namespace E.S.ApiClientHandler.Core
             var newUrl = path.Replace(Client?.BaseAddress?.ToString() ?? "", "");
             var result = await ApiRequestBuilder.New()
                 .WithMethod(HttpMethod.Get)
-                .WithCacheClient(withCache ? CachingManager : null, AbsoluteExpirationRelativeToNowInSeconds)
                 .WithUrl(newUrl)
                 .ExecuteAsync<List<T>>();
             return (result?.Value ?? new List<T>()).Where(w => w != null).ToList();
@@ -143,15 +159,7 @@ namespace E.S.ApiClientHandler.Core
 
         public List<T> GetAsIsList<T>(string path, bool withCache = false) where T : class
         {
-            var newUrl = path.Replace(Client?.BaseAddress?.ToString() ?? "", "");
-            var result = ApiRequestBuilder.New()
-                .WithMethod(HttpMethod.Get)
-                .WithCacheClient(withCache ? CachingManager : null, AbsoluteExpirationRelativeToNowInSeconds)
-                .WithUrl(newUrl)
-                .ExecuteAsync<List<T>>()
-                .GetAwaiter()
-                .GetResult();
-            return (result?.Value ?? new List<T>()).Where(w => w != null).ToList();
+            return GetAsIsListAsync<T>(path, withCache).GetAwaiter().GetResult();
         }
 
         public async Task<T> PostAsync<T>(string path, object content) where T : class, new()
@@ -167,15 +175,7 @@ namespace E.S.ApiClientHandler.Core
 
         public T Post<T>(string path, object content) where T : class, new()
         {
-            var newUrl = path.Replace(Client?.BaseAddress?.ToString() ?? "", "");
-            var result = ApiRequestBuilder.New()
-                .WithMethod(HttpMethod.Post)
-                .WithContent(content)
-                .WithUrl(newUrl)
-                .ExecuteAsync<ContentResponse<T>>()
-                .GetAwaiter()
-                .GetResult();
-            return GetData(result);
+            return PostAsync<T>(path, content).GetAwaiter().GetResult();
         }
 
         public async Task<T> PostAsIsAsync<T>(string path, object content) where T : class, new()
@@ -191,15 +191,7 @@ namespace E.S.ApiClientHandler.Core
 
         public T PostAsIs<T>(string path, object content) where T : class, new()
         {
-            var newUrl = path.Replace(Client?.BaseAddress?.ToString() ?? "", "");
-            var result = ApiRequestBuilder.New()
-                .WithMethod(HttpMethod.Post)
-                .WithContent(content)
-                .WithUrl(newUrl)
-                .ExecuteAsync<T>()
-                .GetAwaiter()
-                .GetResult();
-            return GetData(result);
+            return PostAsIsAsync<T>(path, content).GetAwaiter().GetResult();
         }
 
         public async Task<List<T>> PostListAsync<T>(string path, object content) where T : class
@@ -215,15 +207,12 @@ namespace E.S.ApiClientHandler.Core
 
         public List<T> PostList<T>(string path, object content) where T : class
         {
-            var newUrl = path.Replace(Client?.BaseAddress?.ToString() ?? "", "");
-            var result = ApiRequestBuilder.New()
-                .WithMethod(HttpMethod.Post)
-                .WithContent(content)
-                .WithUrl(newUrl)
-                .ExecuteAsync<ContentResponse<List<T>>>()
-                .GetAwaiter()
-                .GetResult();
-            return (result?.Value?.Data ?? new List<T>()).Where(w => w != null).ToList();
+            return PostListAsync<T>(path, content).GetAwaiter().GetResult();
+        }
+
+        public void SetUser(string user)
+        {
+            ApiRequestBuilder.SetUser(user);
         }
 
         #endregion

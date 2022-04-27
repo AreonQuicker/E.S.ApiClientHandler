@@ -9,6 +9,11 @@ namespace E.S.ApiClientHandler.Interfaces
 {
     public interface IApiRequestBuilder : IDisposable
     {
+        IApiRequestBuilder SetUser(string user);
+
+        IApiRequestBuilder WithCacheClient(IApiCachingManager apiCachingManager,
+            int absoluteExpirationRelativeToNowInSeconds);
+
         IApiRequestBuilderInner1 New();
     }
 
@@ -18,10 +23,6 @@ namespace E.S.ApiClientHandler.Interfaces
         IApiRequestBuilderInner1 AddHeader(string key, string header);
         IApiRequestBuilderInner1 AddKeyAndHeaders(Dictionary<string, string> keyAndHeaders);
         IApiRequestBuilderInner1 WithContent(object content);
-
-        IApiRequestBuilderInner1 WithCacheClient(IApiCachingManager apiCachingManager,
-            int absoluteExpirationRelativeToNowInSeconds = 600);
-
         IApiRequestBuilderInner1 WithMethod(HttpMethod httpMethod);
         IApiRequestBuilderInner2 WithUrl(ApiUrlBuilder requestUrlBuilder);
         IApiRequestBuilderInner2 WithUrl(string url);
@@ -31,7 +32,6 @@ namespace E.S.ApiClientHandler.Interfaces
     {
         Task<ApiResponse<T>> ExecuteAsync<T>(T defaultValue = null) where T : class, new();
         Task<ApiResponse> ExecuteNoValueAsync();
-        
         Task<ApiResponse<string>> ExecuteAsync();
     }
 }
